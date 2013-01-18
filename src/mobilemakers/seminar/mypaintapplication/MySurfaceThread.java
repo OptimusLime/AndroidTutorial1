@@ -11,6 +11,8 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.hardware.SensorEvent;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 /**
@@ -32,7 +34,13 @@ public class MySurfaceThread extends Thread {
 	float[] hsv = new float[] { 0, 1, 1 };
 	private boolean useRainbow;
 	private boolean shouldClearVariables = false;
-
+	private boolean useAccelerometerToDraw = false;
+	float lastAccelX, lastAccelY, lastAccelZ;
+	boolean accelReset = false;
+	public float maxmiumAccelerometerRange = 0;
+	public boolean toroidalAccelDrawing = true;
+	public PointF lastAccelPoint;
+	
 	/**
 	 * @param c
 	 *          The context this thread is in.
@@ -52,24 +60,184 @@ public class MySurfaceThread extends Thread {
 		lastX = -1;
 		lastY = -1;
 		useRainbow = true;
+		useAccelerometerForDrawing();
 	}
 
+	/**
+	 * Override touch drawing with accelerometer 
+	 */
+	public void useAccelerometerForDrawing()
+	{
+		useAccelerometerToDraw = true;
+		shouldClearVariables = true;
+		
+		resetAccelerometerVariables();
+		
+	}
+	public void stopUsingAccelerometer()
+	{
+		useAccelerometerToDraw = false;
+		shouldClearVariables = true;
+	}
+	
+	private void resetAccelerometerVariables()
+	{
+		accelReset = true;
+		
+	}
+	private void setAccelerationData(float x, float y, float z)
+	{
+		lastAccelX = x;
+		lastAccelY = y;
+		lastAccelZ = z;
+	}
+	private PointF getAccelerationDelta(float x, float y, float z)
+	{
+		 
+		float dx = 10f*(lastAccelX - x)/maxmiumAccelerometerRange;
+		float dy =	10f*(y - lastAccelY)/maxmiumAccelerometerRange;
+		return new PointF(dx,dy);
+	}
+	private boolean allowTouchEvents()
+	{
+		return !useAccelerometerToDraw;
+	}
+	
+	
+	 public void receiveSensorData(float x, float y, float z, float accuracy) {
+
+		 if(!useAccelerometerToDraw)
+			 return;
+		 
+	    	//Need to decide what to do with sensor data, when do you move, how do you move?
+		 if(accelReset)
+		 {
+			 setAccelerationData(x, y, z);
+			 Rect frame = sholder.getSurfaceFrame();
+			 lastAccelPoint = new PointF(frame.width()/2, frame.height()/2);
+			 accelReset = false;
+			 
+		 }
+		 else
+		 {
+			 PointF direction = getAccelerationDelta(x, y, z);
+			 Rect frame = sholder.getSurfaceFrame();
+			 PointF clampedXY = clampAccelXY(lastAccelPoint.x + direction.x, lastAccelPoint.y + direction.y, 
+					 0, frame.width(),
+					 0, frame.height());
+			 
+			 addXYPoint(clampedXY.x, clampedXY.y);
+			 lastAccelPoint.x = clampedXY.x;
+			 lastAccelPoint.y = clampedXY.y;
+		 }
+	 }
+	
+	 private PointF clampAccelXY(float xValue, float yValue, float minWidth, float maxWidth, float minHeight, float maxHeigth)
+	 {
+		 float finX;
+		 float finY;
+		 
+		 if(xValue >= maxWidth)
+		 {
+			 if(toroidalAccelDrawing){
+				 shouldClearVariables = true;
+				 finX =  minWidth;
+			 }
+			 else
+				 finX = maxWidth;
+		 }
+		 else if(xValue <= minWidth)
+		 {
+			 if(toroidalAccelDrawing){
+				 shouldClearVariables = true;
+				 finX = maxWidth;
+			 }
+			 else
+				 finX = minWidth;
+		 }
+		 else 
+			 finX = xValue;
+		 
+		 if(yValue >= maxHeigth)
+		 {
+			 if(toroidalAccelDrawing){
+				 shouldClearVariables = true;
+				 finY = minHeight;
+			 }
+			 else
+				 finY = maxHeigth;
+		 }
+		 else if(yValue <= minHeight)
+		 {
+			 if(toroidalAccelDrawing){
+				 shouldClearVariables = true;
+				 finY = maxHeigth;
+			 }
+			 else
+				 finY = minHeight;
+		 }
+		 else 
+			 finY = yValue;
+		 
+		 return new PointF(finX, finY);
+		 
+		 
+	 }
+	 private float clampAccelY(float yValue, float minWidth, float maxWidth)
+	 {
+		 if(yValue >= maxWidth)
+		 {
+			 if(toroidalAccelDrawing){
+				 shouldClearVariables = true;
+				 return minWidth;
+			 }
+			 else
+				 return maxWidth;
+		 }
+		 else if(yValue <= minWidth)
+		 {
+			 if(toroidalAccelDrawing){
+				 shouldClearVariables = true;
+				 return maxWidth;
+			 }
+			 else
+				 return minWidth;
+		 }
+		 else 
+			 return yValue;
+		 
+	 }
+	 
 	/**
 	 * @param e
 	 *          MotionEvent for the "down" event.
 	 */
 	public void onDown(float x, float y) {
 		
+		if(!allowTouchEvents())
+			return;
+		
 		addXYPoint(x,y);
 		
 	}
 	public void onMove(float x, float y)
 	{
+		if(!allowTouchEvents())
+			return;
+		
 		addXYPoint(x, y);
+	}
+	public void onUp(float x, float y) {
+		if(!allowTouchEvents())
+			return;
+		//we've ended a series of points, make sure we don't store the last point
+				//this will prevent the line from continuing from the last point when we clikc on a new area
+		shouldClearVariables = true;
 	}
 	
 	public void addXYPoint(float x, float y)
 	{
+		
 		if (lastX != -1) {
 			float dy = (y - lastY) / 15;
 			float dx = (x - lastX) / 15;
@@ -86,12 +254,7 @@ public class MySurfaceThread extends Thread {
 		lastY = y;
 	}
 
-	public void onUp(float x, float y) {
-		
-		//we've ended a series of points, make sure we don't store the last point
-				//this will prevent the line from continuing from the last point when we clikc on a new area
-		shouldClearVariables = true;
-	}
+	
 	public void clearVariables()
 	{
 		lastPoint = null;
@@ -229,4 +392,9 @@ public class MySurfaceThread extends Thread {
 			p.setColor(color);
 		}
 	}
+	
+	//Deal with accelerometer data
+	
+	
+	
 }

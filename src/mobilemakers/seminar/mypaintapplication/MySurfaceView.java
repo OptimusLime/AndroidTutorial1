@@ -1,6 +1,9 @@
 package mobilemakers.seminar.mypaintapplication;
 
 import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -14,9 +17,11 @@ import android.view.View.OnTouchListener;
  * @author Daniel Wasserman
  */
 public class MySurfaceView extends SurfaceView implements
-		SurfaceHolder.Callback, OnTouchListener {
+		SurfaceHolder.Callback, OnTouchListener, SensorEventListener {
 	MySurfaceThread thread;
+	
 
+     
 	public MySurfaceView(Context context) {
 		super(context);
 		SurfaceHolder s = this.getHolder();
@@ -24,8 +29,9 @@ public class MySurfaceView extends SurfaceView implements
 		this.setFocusable(true);
 		thread = new MySurfaceThread(context);
 		this.setOnTouchListener(this);
+		
 	}
-
+	
 	public boolean onTouch(View v, MotionEvent e) {
 		
 		switch(e.getAction())
@@ -34,10 +40,10 @@ public class MySurfaceView extends SurfaceView implements
 			thread.lastX = -1;
 			thread.lastY = -1;
 			thread.onDown(e.getX(), e.getY());
-			Log.d("actiondown", "made it down");
+//			Log.d("actiondown", "made it down");
 			break;
 		case MotionEvent.ACTION_MOVE:
-			Log.d("actionMove", "made it to move");
+//			Log.d("actionMove", "made it to move");
 			thread.onMove(e.getX(), e.getY());
 			break;
 		case MotionEvent.ACTION_UP:
@@ -45,14 +51,13 @@ public class MySurfaceView extends SurfaceView implements
 		case MotionEvent.ACTION_POINTER_2_UP:
 		case MotionEvent.ACTION_POINTER_3_UP:
 			
-			Log.d("actionup", "made it up");
+//			Log.d("actionup", "made it up");
 			thread.onUp(0,0);
 			
 			break;
 			default:
-				if(e == null)
-					break;
-				Log.d("actionEvent", "" + e.getAction());
+				
+//				Log.d("actionEvent", "" + e.getAction());
 				break;
 		}
 		
@@ -86,4 +91,20 @@ public class MySurfaceView extends SurfaceView implements
 	public void setColor(int color) {
 		thread.setColor(color);
 	}
+	public void setMaxSensorRange(float sensorRange)
+	{
+		thread.maxmiumAccelerometerRange = sensorRange;
+	}
+
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    public void onSensorChanged(SensorEvent event) {
+
+    	
+    	thread.receiveSensorData(event.values[0], event.values[1], event.values[2], event.accuracy);
+//		Log.d("accelData", "Vals: (" + event.values[0] + " , " + event.values[1] + " , " + event.values[2]+ ")");
+		
+    }
+	
 }
