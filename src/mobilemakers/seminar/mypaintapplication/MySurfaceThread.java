@@ -8,6 +8,8 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.view.SurfaceHolder;
 
@@ -29,6 +31,7 @@ public class MySurfaceThread extends Thread {
 	float lastX, lastY;
 	float[] hsv = new float[] { 0, 1, 1 };
 	private boolean useRainbow;
+	private boolean shouldClearVariables = false;
 
 	/**
 	 * @param c
@@ -45,6 +48,7 @@ public class MySurfaceThread extends Thread {
 		xQueue = new ConcurrentLinkedQueue();
 		yQueue = new ConcurrentLinkedQueue();
 		p.setColor(Color.CYAN);
+		p.setStrokeWidth(5);
 		lastX = -1;
 		lastY = -1;
 		useRainbow = true;
@@ -55,6 +59,17 @@ public class MySurfaceThread extends Thread {
 	 *          MotionEvent for the "down" event.
 	 */
 	public void onDown(float x, float y) {
+		
+		addXYPoint(x,y);
+		
+	}
+	public void onMove(float x, float y)
+	{
+		addXYPoint(x, y);
+	}
+	
+	public void addXYPoint(float x, float y)
+	{
 		if (lastX != -1) {
 			float dy = (y - lastY) / 15;
 			float dx = (x - lastX) / 15;
@@ -70,6 +85,25 @@ public class MySurfaceThread extends Thread {
 		lastX = x;
 		lastY = y;
 	}
+
+	public void onUp(float x, float y) {
+		
+		//we've ended a series of points, make sure we don't store the last point
+				//this will prevent the line from continuing from the last point when we clikc on a new area
+		shouldClearVariables = true;
+	}
+	public void clearVariables()
+	{
+		lastPoint = null;
+		lastX = -1;
+		lastY = -1;
+		if(this.xQueue != null)
+			this.xQueue.clear();
+		if(this.yQueue != null)
+			this.yQueue.clear();
+		shouldClearVariables = false;
+	}
+
 
 	/**
 	 * 
@@ -139,7 +173,7 @@ public class MySurfaceThread extends Thread {
 			}
 		}
 	}
-
+	PointF lastPoint = null;
 	public void update() {
 		Canvas c = new Canvas(bitmap);
 		int color = -1;
@@ -147,11 +181,28 @@ public class MySurfaceThread extends Thread {
 			color = Color.HSVToColor(hsv);
 			p.setColor(color);
 		}
+		
+		if(shouldClearVariables){
+			clearVariables();
+			return;
+		}
+		
 		while (!xQueue.isEmpty() && !yQueue.isEmpty()) {
+			
+			if(shouldClearVariables){
+				clearVariables();
+				break;
+			}
+			
 			float x = xQueue.poll();
 			float y = yQueue.poll();
-			c.drawCircle(x, y, 5, p);
-			if (useRainbow) {
+			
+			if(lastPoint != null)
+				c.drawLine(lastPoint.x, lastPoint.y, x, y, p);
+			
+			lastPoint = new PointF(x,y);
+			
+			if (useRainbow && lastPoint != null) {
 				p.setColor(color);
 				color = Color.HSVToColor(hsv);
 				hsv[0]++;
