@@ -20,20 +20,24 @@ public class PaintingActivity extends Activity {
     		 
      //Handle Accelerometer registration
      protected void onResume() {
+    	 Log.d("resuming activity", "resumed");
+    	 msv.onResume();
          super.onResume();
-         msv.onResume();
+        
      }
 
      protected void onPause() {
+    	 Log.d("pausing activity", "paused");
+         msv.onPause();
          super.onPause();
-         msv.onResume();
      }
 
      
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+
+   	 	Log.d("creating activity", "created");
 		
 		msv = new MySurfaceView(this);
 		this.setContentView(msv);

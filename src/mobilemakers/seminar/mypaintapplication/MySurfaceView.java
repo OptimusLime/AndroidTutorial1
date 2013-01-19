@@ -56,42 +56,44 @@ public class MySurfaceView extends SurfaceView implements
 	 */
 	public boolean onTouch(View v, MotionEvent e) {
 		
-		
+		//what kind of action is happening in our touch?
 		switch(e.getAction())
 		{
-		case MotionEvent.ACTION_DOWN:
+
 			//the user has just started pressing the screen
-			
-			//we reset our last position
-			thread.lastX = -1;
-			thread.lastY = -1;
-			
-			//then we pass our first point to the thread
-			thread.onDown(e.getX(), e.getY());
-			
-			break;
-		case MotionEvent.ACTION_MOVE:
-			//our user has moved their finger, but yet to withdraw it from the screen
-			//this means we should draw a line from the last place we saw, to this new point!
-			thread.onMove(e.getX(), e.getY());
-			
-			break;
-		case MotionEvent.ACTION_UP:
-		case MotionEvent.ACTION_POINTER_UP:
-		case MotionEvent.ACTION_POINTER_2_UP:
-		case MotionEvent.ACTION_POINTER_3_UP:
-			
-			//the user has pulled their finger off the screen, 
-			thread.onUp(e.getX(),e.getY());
-			
-			break;
-			default:
+			case MotionEvent.ACTION_DOWN:
+				
+				//then we pass our first point to the thread
+				thread.onDown(e.getX(), e.getY());
+				break;
+	
+				//our user has moved their finger, but yet to withdraw it from the screen
+			case MotionEvent.ACTION_MOVE:
+				
+				//this means we should draw a line from the last place we saw, to this new point!
+				thread.onMove(e.getX(), e.getY());
+				break;
+
+				//the user has pulled their finger off the screen, 
+			case MotionEvent.ACTION_UP:
+			case MotionEvent.ACTION_POINTER_UP:
+			case MotionEvent.ACTION_POINTER_2_UP:
+			case MotionEvent.ACTION_POINTER_3_UP:
+				
+				//Inform the thread, we've moved on with our lives
+				thread.onUp(e.getX(),e.getY());
+				break;
+				
 				//some other action has happened, check our pointer count, if it's 0, don't ask about x,y
+			default:
+				
 				if(e.getPointerCount() != 0)
 					thread.onUp(e.getX(), e.getY());
-				
 				break;
+				
 		}
+		
+		//we're done handling the event, let Android know
 		return true;
 	}
 	
@@ -99,6 +101,9 @@ public class MySurfaceView extends SurfaceView implements
 	 * Handle activity resume, register listening for accelerometer data.
 	 */
 	 public void onResume() {
+
+		 Log.d("registering accel listener", "registered");
+		 //we need to register to receive sensor events (and how often we want to receive them)
 		  mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
      }
 	 
@@ -106,6 +111,8 @@ public class MySurfaceView extends SurfaceView implements
 	  * Handling activity pausing, stop listening to accelerometer data.
 	  */
 	 public void onPause() {
+		 Log.d("releasing accel listener", "released");
+		 //we've paused, stop asking for sensor information
          mSensorManager.unregisterListener(this);
      }
 	
@@ -183,6 +190,8 @@ public class MySurfaceView extends SurfaceView implements
 	 */
 	public void setMaxSensorRange(float sensorRange)
 	{
+		//let the thread know what the maximum acceleration range for calculating brush 
+		//movement
 		thread.maxmiumAccelerometerRange = sensorRange;
 	}
 	
@@ -191,6 +200,7 @@ public class MySurfaceView extends SurfaceView implements
 	 */
 	public void disableAccelerometerDrawing()
 	{
+		//cut off the accelerometer
 		thread.stopUsingAccelerometer();
 	}
 	/**
