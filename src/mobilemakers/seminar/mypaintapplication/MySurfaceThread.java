@@ -33,12 +33,17 @@ public class MySurfaceThread extends Thread {
 	float lastX, lastY;
 	float[] hsv = new float[] { 0, 1, 1 };
 	private boolean useRainbow;
-	private boolean shouldClearVariables = false;
+	
 	private boolean useAccelerometerToDraw = false;
+	
 	float lastAccelX, lastAccelY, lastAccelZ;
+	
 	boolean accelReset = false;
+	
 	public float maxmiumAccelerometerRange = 0;
+	
 	public boolean toroidalAccelDrawing = true;
+	
 	public PointF lastAccelPoint;
 	
 	/**
@@ -69,7 +74,7 @@ public class MySurfaceThread extends Thread {
 	public void useAccelerometerForDrawing()
 	{
 		useAccelerometerToDraw = true;
-		shouldClearVariables = true;
+		 clearVariables();
 		
 		resetAccelerometerVariables();
 		
@@ -77,7 +82,7 @@ public class MySurfaceThread extends Thread {
 	public void stopUsingAccelerometer()
 	{
 		useAccelerometerToDraw = false;
-		shouldClearVariables = true;
+		 clearVariables();
 	}
 	
 	private void resetAccelerometerVariables()
@@ -140,7 +145,7 @@ public class MySurfaceThread extends Thread {
 		 if(xValue >= maxWidth)
 		 {
 			 if(toroidalAccelDrawing){
-				 shouldClearVariables = true;
+				 clearVariables();
 				 finX =  minWidth;
 			 }
 			 else
@@ -149,7 +154,7 @@ public class MySurfaceThread extends Thread {
 		 else if(xValue <= minWidth)
 		 {
 			 if(toroidalAccelDrawing){
-				 shouldClearVariables = true;
+				 clearVariables();
 				 finX = maxWidth;
 			 }
 			 else
@@ -161,7 +166,7 @@ public class MySurfaceThread extends Thread {
 		 if(yValue >= maxHeigth)
 		 {
 			 if(toroidalAccelDrawing){
-				 shouldClearVariables = true;
+				 clearVariables();
 				 finY = minHeight;
 			 }
 			 else
@@ -170,7 +175,7 @@ public class MySurfaceThread extends Thread {
 		 else if(yValue <= minHeight)
 		 {
 			 if(toroidalAccelDrawing){
-				 shouldClearVariables = true;
+				 clearVariables();
 				 finY = maxHeigth;
 			 }
 			 else
@@ -188,7 +193,7 @@ public class MySurfaceThread extends Thread {
 		 if(yValue >= maxWidth)
 		 {
 			 if(toroidalAccelDrawing){
-				 shouldClearVariables = true;
+				 clearVariables();
 				 return minWidth;
 			 }
 			 else
@@ -197,7 +202,7 @@ public class MySurfaceThread extends Thread {
 		 else if(yValue <= minWidth)
 		 {
 			 if(toroidalAccelDrawing){
-				 shouldClearVariables = true;
+				 clearVariables();
 				 return maxWidth;
 			 }
 			 else
@@ -228,11 +233,18 @@ public class MySurfaceThread extends Thread {
 		addXYPoint(x, y);
 	}
 	public void onUp(float x, float y) {
+		
+		//ignore requests, if we're already 
 		if(!allowTouchEvents())
 			return;
+		
 		//we've ended a series of points, make sure we don't store the last point
 				//this will prevent the line from continuing from the last point when we clikc on a new area
-		shouldClearVariables = true;
+		
+		//add our final point, then peace out of here
+		addXYPoint(x, y);
+		
+		clearVariables();
 	}
 	
 	public void addXYPoint(float x, float y)
@@ -257,14 +269,16 @@ public class MySurfaceThread extends Thread {
 	
 	public void clearVariables()
 	{
-		lastPoint = null;
-		lastX = -1;
-		lastY = -1;
-		if(this.xQueue != null)
-			this.xQueue.clear();
-		if(this.yQueue != null)
-			this.yQueue.clear();
-		shouldClearVariables = false;
+		synchronized(xQueue)
+		{
+			lastPoint = null;
+			lastX = -1;
+			lastY = -1;
+			if(this.xQueue != null)
+				this.xQueue.clear();
+			if(this.yQueue != null)
+				this.yQueue.clear();
+		}
 	}
 
 
@@ -345,32 +359,25 @@ public class MySurfaceThread extends Thread {
 			p.setColor(color);
 		}
 		
-		if(shouldClearVariables){
-			clearVariables();
-			return;
-		}
-		
-		while (!xQueue.isEmpty() && !yQueue.isEmpty()) {
-			
-			if(shouldClearVariables){
-				clearVariables();
-				break;
-			}
-			
-			float x = xQueue.poll();
-			float y = yQueue.poll();
-			
-			if(lastPoint != null)
-				c.drawLine(lastPoint.x, lastPoint.y, x, y, p);
-			
-			lastPoint = new PointF(x,y);
-			
-			if (useRainbow && lastPoint != null) {
-				p.setColor(color);
-				color = Color.HSVToColor(hsv);
-				hsv[0]++;
-				if (hsv[0] >= 360)
-					hsv[0] = 0;
+		synchronized(xQueue)
+		{
+			while (!xQueue.isEmpty() && !yQueue.isEmpty()) {
+				
+				float x = xQueue.poll();
+				float y = yQueue.poll();
+				
+				if(lastPoint != null)
+					c.drawLine(lastPoint.x, lastPoint.y, x, y, p);
+				
+				lastPoint = new PointF(x,y);
+				
+				if (useRainbow && lastPoint != null) {
+					p.setColor(color);
+					color = Color.HSVToColor(hsv);
+					hsv[0]++;
+					if (hsv[0] >= 360)
+						hsv[0] = 0;
+				}
 			}
 		}
 	}

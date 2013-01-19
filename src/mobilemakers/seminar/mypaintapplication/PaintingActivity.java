@@ -5,7 +5,9 @@ import android.content.Context;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -13,29 +15,18 @@ import android.view.MenuItem;
 public class PaintingActivity extends Activity {
 
 	private MySurfaceView msv;
-	 private SensorManager mSensorManager;
-     private Sensor mAccelerometer;
-     
-   
-     private void initializeAccelerometer()
-     {
-    		//Deal with accelerometer initialization!
-		 mSensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
-	     mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-	     
-	     msv.setMaxSensorRange(mAccelerometer.getMaximumRange());
-		
-     }
+	
+
     		 
      //Handle Accelerometer registration
      protected void onResume() {
          super.onResume();
-         mSensorManager.registerListener(msv, mAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+         msv.onResume();
      }
 
      protected void onPause() {
          super.onPause();
-         mSensorManager.unregisterListener(msv);
+         msv.onResume();
      }
 
      
@@ -47,9 +38,8 @@ public class PaintingActivity extends Activity {
 		msv = new MySurfaceView(this);
 		this.setContentView(msv);
 		
-		//init accelerometer after surface view is created, passing maximum sensorrange
-		initializeAccelerometer();
-		
+		//send sensor manager to our view. The view will deal with the sensors as it pleases
+		 msv.setSensorManagement((SensorManager)getSystemService(Context.SENSOR_SERVICE));
 	}
 	
 
