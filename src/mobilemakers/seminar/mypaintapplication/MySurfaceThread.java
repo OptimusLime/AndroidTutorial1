@@ -42,13 +42,6 @@ public class MySurfaceThread extends Thread {
 	//Point to track the last known location of a screen touch
 	PointF lastPoint = null;
 	
-	//acceleration variables to track drawing with the accelerometer
-	private boolean useAccelerometerToDraw = false;
-	PointF initialAcceleration = null;
-	//defines what the maximum expected range of the accel sensor is
-	//used to normalize the change in accel values
-	public float maxmiumAccelerometerRange;
-	
 	/**
 	 * @param c
 	 *          The context this thread is in.
@@ -81,9 +74,6 @@ public class MySurfaceThread extends Thread {
 		//this will hold all points ready to be drawn
 		pointQueue = new ConcurrentLinkedQueue<PointF>();
 		
-		//by default, we use the accelerometer to draw now!
-		useAccelerometerForDrawing();
-		
 	}
 
 
@@ -95,7 +85,7 @@ public class MySurfaceThread extends Thread {
 	 */
 	private boolean allowTouchEvents()
 	{
-		return !useAccelerometerToDraw;
+		return true;
 	}
 	 
 	/**
@@ -367,126 +357,6 @@ public class MySurfaceThread extends Thread {
 	 private float clampValue(float val, float min, float max)
 	 {
 		 return Math.max(min,  Math.min(val, max));
-	 }
-	 
-	
-	//Group our accelerometer functions together
-	//these functions handling turning on/off accelerometer drawing
-	
-	/**
-	 * Override touch drawing with accelerometer 
-	 */
-	public void useAccelerometerForDrawing()
-	{
-		useAccelerometerToDraw = true;
-		clearVariables();
-		resetAccelerometerVariables();
-	}
-	public void stopUsingAccelerometer()
-	{
-		useAccelerometerToDraw = false;
-		clearVariables();
-	}
-	
-	private void resetAccelerometerVariables()
-	{
-		initialAcceleration = null;	
-	}
-	private void setInitialAccelerationData(float x, float y, float z)
-	{
-		//if we don't have initial acceleration, create new point object
-		if(initialAcceleration == null)
-			initialAcceleration = new PointF(x, y);
-		//otherwise, just update our variable with the new information
-		else {
-			initialAcceleration.x = x;
-			initialAcceleration.y = y;
-		}
-	}
-	/**
-	 * Get the difference in accelerations, and return a scaled delta movement based on draw speed. 
-	 * @param x
-	 * @param y
-	 * @param z
-	 * @return
-	 */
-	private PointF getAccelerationDelta(float x, float y, float z)
-	{
-		float drawSpeed = 10f;
-		float dx = drawSpeed*(initialAcceleration.x - x)/maxmiumAccelerometerRange;
-		float dy =	drawSpeed*(y - initialAcceleration.y)/maxmiumAccelerometerRange;
-		return new PointF(dx,dy);
-	}
-	
-	
-
-	
-	/**
-	 * Receive and process accelerometer data in order to draw using accelerometer. 
-	 * This is where most of the logic for drawing with accelerometer happens. 
-	 * @param x
-	 * @param y
-	 * @param z
-	 * @param accuracy
-	 */
-	 public void receiveSensorData(float x, float y, float z, float accuracy) {
-
-		 //are we using the accelerometer? No, then ignore sensor data
-		 //ideally, we would deregister from receiving these sensor events, 
-		 //but this will do fine for now. 
-		 if(!useAccelerometerToDraw)
-			 return;
-		 
-    	//Need to decide what to do with sensor data, when do you move, how do you move?
-		 if(initialAcceleration == null)
-		 {
-			 //here we set our initialAcceleration data
-			 setInitialAccelerationData(x, y, z);
-			 
-			 //now we have say what our "lastPoint" is.
-			 //we default to the center of the screen
-			 
-			 lastPoint = centerOfScreen();
-			 
-		 }
-		 else
-		 {
-			 //if our last point gets reset, start from the center again
-			 if(lastPoint == null)
-				 lastPoint = centerOfScreen();
-			 
-			 //we get the magnitude of change, 
-			 //based on the difference between current accel, and initial accel vector
-			 PointF direction = getAccelerationDelta(x, y, z);
-			 
-			 //we need to make sure we don't draw outside of our bounds
-			 Rect frame = sholder.getSurfaceFrame();
-			 
-			 //now we clamp our position, based on the width and height
-			 PointF clampedXY = clampAccelXY(lastPoint.x + direction.x, lastPoint.y + direction.y, 
-					 0, frame.width(),
-					 0, frame.height());
-			 
-			 //then we add our modified point to be drawn
-			 addXYPoint(clampedXY.x, clampedXY.y);
-			 
-			 //we modify our lastPoint to be the clamped point we just calculated
-			 lastPoint = new PointF(clampedXY.x, clampedXY.y);
-		 }
-	 }
-
-	 /**
-	  * Returns half width, half height
-	  * @return
-	  */
-	 private PointF centerOfScreen()
-	 {
-		 //now we have say what our "lastPoint" is.
-		 //We get the size of the screen
-		 Rect frame = sholder.getSurfaceFrame();
-		 
-		 //then we set our initial draw point to be the center of the screen
-		 return new PointF(frame.width()/2, frame.height()/2);
 	 }
 	
 }

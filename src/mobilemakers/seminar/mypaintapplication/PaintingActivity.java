@@ -18,17 +18,14 @@ public class PaintingActivity extends Activity {
 	
 
     		 
-     //Handle Accelerometer registration
      protected void onResume() {
     	 Log.d("resuming activity", "resumed");
-    	 msv.onResume();
          super.onResume();
         
      }
 
      protected void onPause() {
     	 Log.d("pausing activity", "paused");
-         msv.onPause();
          super.onPause();
      }
 
@@ -41,9 +38,6 @@ public class PaintingActivity extends Activity {
 		
 		msv = new MySurfaceView(this);
 		this.setContentView(msv);
-		
-		//send sensor manager to our view. The view will deal with the sensors as it pleases
-		 msv.setSensorManagement((SensorManager)getSystemService(Context.SENSOR_SERVICE));
 	}
 	
 
@@ -53,6 +47,7 @@ public class PaintingActivity extends Activity {
 		return true;
 	}
 
+	//setting options for our menu, calls the particular funciton inside our surface view
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case R.id.clear:
