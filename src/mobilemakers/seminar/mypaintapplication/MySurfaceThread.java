@@ -107,15 +107,20 @@ public class MySurfaceThread extends Thread {
 		if(!allowTouchEvents())
 			return;
 		
-		addXYPoint(x,y);
+		//stomp out our last point, we're starting a new line!
+		lastPoint = null;
 		
+		//now add this point first
+		addXYPoint(x,y);
 	}
 	public void onMove(float x, float y)
 	{
 		if(!allowTouchEvents())
 			return;
 		
-		addXYPoint(x, y);
+		//add our point on move
+		addXYPoint(x, y);		
+		
 	}
 	public void onUp(float x, float y) {
 		
@@ -125,11 +130,8 @@ public class MySurfaceThread extends Thread {
 		
 		//we've ended a series of points, make sure we don't store the last point
 				//this will prevent the line from continuing from the last point when we clikc on a new area
-		
-		//add our final point, then peace out of here
-		addXYPoint(x, y);
-		
 		clearVariables();
+		
 	}
 	
 	
@@ -140,27 +142,36 @@ public class MySurfaceThread extends Thread {
 	 */
 	public void addXYPoint(float x, float y)
 	{
-		//if we don't have a last point, add our first part
-		if(lastPoint == null)
+		//keep in mind, we could be adding points WHILE we're printing points. 
+		//To prevent this, we must synchronize our point queue, and wait until the other points
+		//have been ejected for drawing
+		synchronized(pointQueue)
 		{
-			//we don't have a last point, simply add the x,y directly to the queue
-			pointQueue.add(new PointF(x,y));
-		}
-		else
-		{
-			int pieces = 15;
-			//we have a lastpoint, break down the difference into chunks, and draw all those chunks
-			float dx = (x - lastPoint.x)/pieces;
-			float dy = (y - lastPoint.y)/pieces;
-			
-			//loop through, adding the incremental points for our draw line
-			for (int i = 0; i < pieces; i++) {
-				this.pointQueue.add(new PointF(lastPoint.x + dx * i, lastPoint.y + dy*i));
+			//if we don't have a last point, add our first part
+			if(lastPoint == null)
+			{
+				//we don't have a last point, simply add the x,y directly to the queue
+				pointQueue.add(new PointF(x,y));
 			}
+			else
+			{
+				int pieces = 15;
+				
+				//we have a lastpoint, break down the difference into chunks, and draw all those chunks
+				float dx = (x - lastPoint.x)/pieces;
+				float dy = (y - lastPoint.y)/pieces;
+				
+					
+				//loop through, adding the incremental points for our draw line
+				for (int i = 0; i < pieces; i++) {
+					pointQueue.add(new PointF(lastPoint.x + dx * i, lastPoint.y + dy*i));
+				}
+				pointQueue.add(new PointF(x,y));
+			}
+
+			lastPoint = new PointF(x,y);
 		}
-	
-		lastPoint.x = x;
-		lastPoint.y = y;
+		
 	}
 
 	/** 
@@ -258,17 +269,27 @@ public class MySurfaceThread extends Thread {
 			color = Color.HSVToColor(hsv);
 			p.setColor(color);
 		}
-		
+
+		//we make sure that nobody is accessing pointqueue, while we're draining it
+		//and drawing our lines
 		synchronized(pointQueue)
 		{
+			
+			PointF lp = null;
+			
+			//as long as we have points to draw, keep looping
 			while (!pointQueue.isEmpty()) {
 				
+				//grab our point from the line
 				PointF drawPoint = pointQueue.poll();
 				
-				if(lastPoint != null)
-					c.drawLine(lastPoint.x, lastPoint.y, drawPoint.x, drawPoint.y, p);
+				//make sure we have the previous point
+				if(lp != null)
+					//if we have a previous point, draw a line between the two
+					c.drawLine(lp.x, lp.y, drawPoint.x, drawPoint.y, p);
 				
-				lastPoint = drawPoint;
+				//set our previous point as the point we just looked at
+				lp = new PointF(drawPoint.x, drawPoint.y);
 				
 				//if we're using a random style of drawing, we need to update our color 
 				//after each line drawn!
@@ -450,7 +471,7 @@ public class MySurfaceThread extends Thread {
 			 addXYPoint(clampedXY.x, clampedXY.y);
 			 
 			 //we modify our lastPoint to be the clamped point we just calculated
-			 lastPoint = clampedXY;
+			 lastPoint = new PointF(clampedXY.x, clampedXY.y);
 		 }
 	 }
 
