@@ -10,12 +10,20 @@
         android:layout_centerHorizontal="true"
         android:orientation="vertical" >
 
+		<TextView
+		    android:id="@+id/tvHello"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:layout_gravity="center"
+		    android:text="@string/hello_world" />
+
         <Button
-            android:id="@+id/button1"
+            android:id="@+id/bPing"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="startPaint"
-            android:text="@string/startPaintingButton" />
+            android:layout_gravity="center"
+            android:onClick="pingButton"
+            android:text="@string/pingButton" />
 
     </LinearLayout>
 

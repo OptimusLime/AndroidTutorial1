@@ -1,9 +1,9 @@
 package mobilemakers.seminar.mypaintapplication;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 
 public class AndroidActivity extends Activity {
   
@@ -15,13 +15,13 @@ public class AndroidActivity extends Activity {
   }
   
   /**
-   * Function to open up the paint activity. 
+   * Function to change our text!. 
    * @param v
    */
-  public void startPaint(View v) {
+  public void pingButton(View v) {
 	  
-	  //Create our intent to launch the paint activity
-	  Intent openActivity = new Intent(this,PaintingActivity.class);
-      this.startActivity(openActivity);
+	  TextView tvHello = (TextView) findViewById(R.id.tvHello);
+	  tvHello.setText("Pong");
+  
   }
 }
