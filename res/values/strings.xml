@@ -3,5 +3,5 @@
     <string name="app_name">SimpleAndroid</string>
     <string name="activity_title">SimpleAndroid</string>
     <string name="hello_world">Hello world!</string>
-	<string name="pingButton">Ping!</string>
+	<string name="paintButtonText">Start Painting!</string>
 </resources>
