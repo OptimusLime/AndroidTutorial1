@@ -26,6 +26,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	
 	//a queue to hold touch events
 	private Queue<PointF> pointQueue;
+	private PointF lastPoint;
 	
     /**
      * Constructor for a surfaceview, pretty standard. Registers for touches, and creates our drawing thread. 
@@ -70,24 +71,24 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 
 			//the user has just started pressing the screen
 			case MotionEvent.ACTION_DOWN:
-				Log.d("touch", "down");				
+				Log.d("touch", "down");	
+				
 				//queue up our new point
-				pointQueue.add(new PointF(e.getX(), e.getY()));
-				//print our point
-				updateBitmap();
-				//update our screen!
-				drawToScreen();				
+				addXYPoint(e.getX(), e.getY());
+
+				//run our drawing code
+				runDrawing();
 				break;		
 				
 				//our user has moved their finger, but yet to withdraw it from the screen
 			case MotionEvent.ACTION_MOVE:
 				Log.d("touch", "move");			
 				//queue up our new point
-				pointQueue.add(new PointF(e.getX(), e.getY()));
-				//print our point
-				updateBitmap();
-				//update our screen!
-				drawToScreen();				
+				addXYPoint(e.getX(), e.getY());
+				
+				//run our drawing code
+				runDrawing();
+				
 				//this means we should draw a line from the last place we saw, to this new point!
 				break;
 				//the user has pulled their finger off the screen, 
@@ -96,6 +97,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			case MotionEvent.ACTION_POINTER_2_UP:
 			case MotionEvent.ACTION_POINTER_3_UP:
 				Log.d("touch", "up");
+				
+				lastPoint = null;
+				
 				break;
 				
 				//some other action has happened
@@ -107,6 +111,49 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		//we're done handling the event, let Android know
 		return true;
 	  }
+	  
+		/**
+		 * Adds x,y to point queue, breaking into chunks and adding incremental points of the line
+		 * @param x
+		 * @param y
+		 */
+		public void addXYPoint(float x, float y)
+		{
+			//if we don't have a last point, add our first part
+			if(lastPoint == null)
+			{
+				//we don't have a last point, simply add the x,y directly to the queue
+				pointQueue.add(new PointF(x,y));
+			}
+			else
+			{
+				int pieces = 15;
+				
+				//we have a lastpoint, break down the difference into chunks, and draw all those chunks
+				float dx = (x - lastPoint.x)/pieces;
+				float dy = (y - lastPoint.y)/pieces;
+				
+					
+				//loop through, adding the incremental points for our draw line
+				for (int i = 0; i < pieces; i++) {
+					pointQueue.add(new PointF(lastPoint.x + dx * i, lastPoint.y + dy*i));
+				}
+				pointQueue.add(new PointF(x,y));
+			}
+
+			lastPoint = new PointF(x,y);
+			
+			
+		}
+		
+	  
+		private void runDrawing()
+		{
+			//print our point
+			updateBitmap();
+			//update our screen!
+			drawToScreen();	
+		}
 	  
 	  private void drawToScreen()
 	  {
