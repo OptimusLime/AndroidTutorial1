@@ -1,5 +1,8 @@
 package mobilemakers.seminar.mypaintapplication;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -21,6 +24,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	private Bitmap bitmap;
 	private Paint p; // added
 	
+	//a queue to hold touch events
+	private Queue<PointF> pointQueue;
+	
     /**
      * Constructor for a surfaceview, pretty standard. Registers for touches, and creates our drawing thread. 
      * @param context
@@ -41,6 +47,10 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		p.setColor(Color.CYAN);
 		p.setStrokeWidth(5);
 		
+		//we initialize our queue of objects
+		//this will hold all points ready to be drawn
+		pointQueue = new ConcurrentLinkedQueue<PointF>();
+		
 		//can you focus on this view object?
 		this.setFocusable(true);
 		
@@ -60,19 +70,24 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 
 			//the user has just started pressing the screen
 			case MotionEvent.ACTION_DOWN:
-				Log.d("touch", "down");
-				
+				Log.d("touch", "down");				
+				//queue up our new point
+				pointQueue.add(new PointF(e.getX(), e.getY()));
 				//print our point
-				updateBitmap(new PointF(e.getX(), e.getY()));
-				
+				updateBitmap();
 				//update our screen!
-				drawToScreen();
-				
+				drawToScreen();				
 				break;		
 				
 				//our user has moved their finger, but yet to withdraw it from the screen
 			case MotionEvent.ACTION_MOVE:
-				Log.d("touch", "move");
+				Log.d("touch", "move");			
+				//queue up our new point
+				pointQueue.add(new PointF(e.getX(), e.getY()));
+				//print our point
+				updateBitmap();
+				//update our screen!
+				drawToScreen();				
 				//this means we should draw a line from the last place we saw, to this new point!
 				break;
 				//the user has pulled their finger off the screen, 
@@ -106,12 +121,19 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		  
 	  }
 	  
-	  private void updateBitmap(PointF pointToDraw)
+	  private void updateBitmap()
 	  {
+		  //let's paint to our bitmap using a canvas object
 		  Canvas c = new Canvas(bitmap);
 		  
-		  //do our drawing of points here!
-		  c.drawCircle(pointToDraw.x, pointToDraw.y, 5, p);
+		  while(!pointQueue.isEmpty())
+		  {
+			  //ask our queue the next point to draw!
+			  PointF pointToDraw = pointQueue.poll();
+		  
+			  //do our drawing of points here!
+			  c.drawCircle(pointToDraw.x, pointToDraw.y, 5, p);
+		  }
 	  }
 	  
 	  private void setupBitmap()
