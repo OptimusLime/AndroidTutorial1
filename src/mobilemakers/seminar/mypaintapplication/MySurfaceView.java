@@ -28,6 +28,10 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	private Queue<PointF> pointQueue;
 	private PointF lastPoint;
 	
+	//variables for drawing in rainbow colors!
+	float[] hsv = new float[] { 0, 1, 1 };
+	private boolean useRainbow = true;
+	
     /**
      * Constructor for a surfaceview, pretty standard. Registers for touches, and creates our drawing thread. 
      * @param context
@@ -127,7 +131,15 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			}
 			else
 			{
-				int pieces = 15;
+				//how many circles per pixel distance
+				float circlesPerPixelDistance = 1.1f;
+				//our distance between the last point and this new point
+				double pointDistance = Math.sqrt((x - lastPoint.x)*(x - lastPoint.x) 
+										+  (y - lastPoint.y)* (y - lastPoint.y));
+				
+				//number of desired circles = pixelDistance / circlesPerPixelDistance  
+				int pieces = (int)Math.ceil(pointDistance/circlesPerPixelDistance);
+
 				
 				//we have a lastpoint, break down the difference into chunks, and draw all those chunks
 				float dx = (x - lastPoint.x)/pieces;
@@ -171,7 +183,10 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	  private void updateBitmap()
 	  {
 		  //let's paint to our bitmap using a canvas object
-		  Canvas c = new Canvas(bitmap);
+		  Canvas c = new Canvas(bitmap);	
+		  
+		  //define our color int for drawing
+		  int color = Color.HSVToColor(hsv);
 		  
 		  while(!pointQueue.isEmpty())
 		  {
@@ -180,6 +195,14 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		  
 			  //do our drawing of points here!
 			  c.drawCircle(pointToDraw.x, pointToDraw.y, 5, p);
+			  
+			  if (useRainbow && lastPoint != null) {
+					p.setColor(color);
+					color = Color.HSVToColor(hsv);
+					hsv[0]++;
+					if (hsv[0] >= 360)
+						hsv[0] = 0;
+				}
 		  }
 	  }
 	  
