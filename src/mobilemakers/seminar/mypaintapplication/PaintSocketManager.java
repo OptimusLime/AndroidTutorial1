@@ -30,8 +30,10 @@ public class PaintSocketManager {
 		  //we need to start up our socket task, connecting to the appropriate address and port
 		  try
 		  {
+			  //this will be randomly assigned on our servers, so you need to put in the 
+			  //appropriate port depending on what was generated
 			  int yourPortID = 10000;
-			  socketTask.connect(InetAddress.getByName("192.168.1.100"), yourPortID);
+			  socketTask.connect(InetAddress.getByName("demo2.mobilemakers.net"), yourPortID);
 			  socketTask.start();
 		  }
 		  catch (UnknownHostException e) {
