@@ -21,7 +21,6 @@ public class PaintingActivity extends Activity implements SocketReadHandler, Soc
 	private MySurfaceView msv;
 	private PaintSocketManager socketManager;
 	
-	
 	  @Override
 	  public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);

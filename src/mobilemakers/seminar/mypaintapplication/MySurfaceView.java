@@ -31,11 +31,11 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	
 	//a queue to hold touch events
 	private Queue<PointF> pointQueue;
-	private PointF lastPoint;
+	private PointF lastPoint;	
 	
 	//variables for drawing in rainbow colors!
 	float[] hsv = new float[] { 0, 1, 1 };
-	private boolean useRainbow = true;
+	private boolean useRainbow = false;
 	
     /**
      * Constructor for a surfaceview, pretty standard. Registers for touches, and creates our drawing thread. 
@@ -87,16 +87,21 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 
 				//run our drawing code
 				runDrawing();
+				
+				//let's take this oportunity to send a message to the server!
+				this.sendServerMessage(new PointF(e.getX(), e.getY()));
+				
+				
 				break;		
 				
 				//our user has moved their finger, but yet to withdraw it from the screen
 			case MotionEvent.ACTION_MOVE:
 				Log.d("touch", "move");			
 				//queue up our new point
-				addXYPoint(e.getX(), e.getY());
+//				addXYPoint(e.getX(), e.getY());
 				
 				//run our drawing code
-				runDrawing();
+//				runDrawing();
 				
 				//this means we should draw a line from the last place we saw, to this new point!
 				break;
@@ -106,9 +111,6 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			case MotionEvent.ACTION_POINTER_2_UP:
 			case MotionEvent.ACTION_POINTER_3_UP:
 				Log.d("touch", "up");
-				
-				//let's take this oportunity to send a message to the server!
-				this.sendServerMessage();
 				
 				
 				lastPoint = null;
@@ -281,13 +283,28 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			String msg = new String(rsp);
 			Log.d("paintSocket", "Received message: " + msg);
 			
-			//show everyone what we found!
-			quickToast("Received: " + msg);		
+			
+			try {
+				JSONObject json = new JSONObject(msg);
+				
+				float x = Float.parseFloat(json.getString("x"));
+				float y = Float.parseFloat(json.getString("y"));
+
+				//show everyone what we found!
+				quickToast("Received point: (" + x + "," + y + ")");		
+				
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				quickToast(e.getMessage());
+			}
+			
+			
 			
 			return true;
 			
 		}
-		public void sendServerMessage()
+		public void sendServerMessage(PointF point)
 		{
 			
 			if(this.socketManager == null)
@@ -298,8 +315,10 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			
 			JSONObject json = new JSONObject();
 			try {
+				
 				json
-				.put("hello", "world"); 
+				.put("x", point.x)
+				.put("y", point.y);
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
