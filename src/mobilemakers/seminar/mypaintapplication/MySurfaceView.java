@@ -289,9 +289,23 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				
 				float x = Float.parseFloat(json.getString("x"));
 				float y = Float.parseFloat(json.getString("y"));
+				
+				//instead of sending a popup, let's actually draw the point!
+				
+				//however, note that we don't want to draw a line to this point, so we need 
+				//to make sure there is no last point
+				lastPoint = null;
+				
+				//queue up our new point
+				addXYPoint(x,y);
 
-				//show everyone what we found!
-				quickToast("Received point: (" + x + "," + y + ")");		
+				//a quirk with our drawing code, when we add a point, we set the last point
+				//we need to null it out again! -- this is a hack, we'll need to 
+				//fix up our code so we don't do something silly like this
+				lastPoint = null;
+				
+				//run our drawing code
+				runDrawing();
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -316,9 +330,13 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			JSONObject json = new JSONObject();
 			try {
 				
+				//grab the size of our surface view
+			  Rect frame = sholder.getSurfaceFrame();
+				
+			  //set our json object, but invert the y point, so that it's mirrored across the x axis!
 				json
 				.put("x", point.x)
-				.put("y", point.y);
+				.put("y", frame.height() - point.y);
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
