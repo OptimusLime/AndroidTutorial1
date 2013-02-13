@@ -116,10 +116,13 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			case MotionEvent.ACTION_MOVE:
 				Log.d("touch", "move");			
 				//queue up our new point
-//				addXYPoint(e.getX(), e.getY());
+				addXYPointUser(e.getX(), e.getY());
 				
 				//run our drawing code
-//				runDrawing();
+				runDrawing();
+				
+				//let's take this oportunity to send a message to the server!
+				this.sendServerMessage(new PointF(e.getX(), e.getY()));
 				
 				//this means we should draw a line from the last place we saw, to this new point!
 				break;
@@ -129,8 +132,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			case MotionEvent.ACTION_POINTER_2_UP:
 			case MotionEvent.ACTION_POINTER_3_UP:
 				Log.d("touch", "up");
-				
-				
+								
 				lastPoint = null;
 				
 				break;
@@ -147,11 +149,11 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	  
 	  public void addXYPointUser(float x, float y)
 		{
-		  addXYPoint(x, y, pointQueue, lastPoint);
+		  lastPoint = addXYPoint(x, y, pointQueue, lastPoint);
 		}
 	  public void addXYPointServer(float x, float y)
 		{
-		  addXYPoint(x, y, serverPointQueue, serverLastPoint);
+		  serverLastPoint = addXYPoint(x, y, serverPointQueue, serverLastPoint);
 		}
 	  
 		/**
@@ -159,7 +161,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		 * @param x
 		 * @param y
 		 */
-		public void addXYPoint(float x, float y, Queue<PointF> pq, PointF lp)
+		public PointF addXYPoint(float x, float y, Queue<PointF> pq, PointF lp)
 		{
 			//if we don't have a last point, add our first part
 			if(lp == null)
@@ -191,8 +193,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				pq.add(new PointF(x,y));
 			}
 
-			lp = new PointF(x,y);
-			
+			return new PointF(x,y);			
 			
 		}
 		
@@ -331,19 +332,8 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				float x = Float.parseFloat(json.getString("x"));
 				float y = Float.parseFloat(json.getString("y"));
 				
-				//instead of sending a popup, let's actually draw the point!
-				
-				//however, note that we don't want to draw a line to this point, so we need 
-				//to make sure there is no last point
-				serverLastPoint = null;
-				
 				//queue up our new point
 				addXYPointServer(x,y);
-
-				//a quirk with our drawing code, when we add a point, we set the last point
-				//we need to null it out again! -- this is a hack, we'll need to 
-				//fix up our code so we don't do something silly like this
-				serverLastPoint = null;
 				
 				//run our drawing code
 				runDrawing();

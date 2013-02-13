@@ -58,7 +58,7 @@ public class PaintingActivity extends Activity implements SocketReadHandler, Soc
 			runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					Toast.makeText(getApplicationContext(), "Finished socket write", Toast.LENGTH_SHORT).show();
+					Log.d("paintActivity", "Finished socket write");
 				}
 			});
 			return false;
