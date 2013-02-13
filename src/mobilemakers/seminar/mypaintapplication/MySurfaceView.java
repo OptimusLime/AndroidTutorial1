@@ -237,6 +237,23 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			this.sholder = null;
 		}
 	  
+		public void clear()
+		{
+			//We create a canvas object for our bitmap
+			Canvas c = new Canvas(bitmap);
+			
+			//we paint black over the entire canvas object
+			c.drawColor(Color.BLACK);
+			
+			//we clear out our last point
+			lastPoint = null;
+			
+			//and make sure we don't have anything in the queue for drawing
+			pointQueue.clear();
+			
+			//then we draw the now empty screen for the user
+			runDrawing();
+		}
 	  
 	
 }
