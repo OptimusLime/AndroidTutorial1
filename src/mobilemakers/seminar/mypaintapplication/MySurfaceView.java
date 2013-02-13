@@ -107,6 +107,10 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			case MotionEvent.ACTION_POINTER_3_UP:
 				Log.d("touch", "up");
 				
+				//let's take this oportunity to send a message to the server!
+				this.sendServerMessage();
+				
+				
 				lastPoint = null;
 				
 				break;
@@ -276,22 +280,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		public boolean readServerMessage(byte[] rsp) {
 			String msg = new String(rsp);
 			Log.d("paintSocket", "Received message: " + msg);
-			try {
-				//create a json object from our string (parsed from the byte array)
-				JSONObject json = new JSONObject(msg);
-				
-				//grab the object whose key is "hello" in our current json object
-				String woah = json.getString("hello");
-				
-				//show everyone what we found!
-				quickToast("hello: " + woah);				
-				
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				quickToast(e.getMessage());
-				return false;
-			}
+			
+			//show everyone what we found!
+			quickToast("Received: " + msg);		
 			
 			return true;
 			

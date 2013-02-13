@@ -31,7 +31,7 @@ public class PaintSocketManager {
 		  try
 		  {
 			  int yourPortID = 10000;
-			  socketTask.connect(InetAddress.getByName("demo2.mobilemakers.net"), yourPortID);
+			  socketTask.connect(InetAddress.getByName("192.168.1.100"), yourPortID);
 			  socketTask.start();
 		  }
 		  catch (UnknownHostException e) {
