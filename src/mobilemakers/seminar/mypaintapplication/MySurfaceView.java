@@ -1,5 +1,7 @@
 package mobilemakers.seminar.mypaintapplication;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -16,10 +18,13 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.widget.Toast;
 
 public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback, OnTouchListener {
 
-
+	//Our very own socket manager
+	private PaintSocketManager socketManager;
+	
 	private SurfaceHolder sholder;
 	private Bitmap bitmap;
 	private Paint p; // added
@@ -255,5 +260,65 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			runDrawing();
 		}
 	  
-	
+		//Handling Server calls in this section!
+		
+		//helper function for displaying items to the user
+		 private void quickToast(String msg) {
+				Toast.makeText(this.getContext(), msg, Toast.LENGTH_SHORT).show();
+			}		
+		
+		 public void setSocketManager(PaintSocketManager psm)
+		 {
+			 this.socketManager = psm;
+		 }
+		
+		  //to be called on the main UI thread ONLY
+		public boolean readServerMessage(byte[] rsp) {
+			String msg = new String(rsp);
+			Log.d("paintSocket", "Received message: " + msg);
+			try {
+				//create a json object from our string (parsed from the byte array)
+				JSONObject json = new JSONObject(msg);
+				
+				//grab the object whose key is "hello" in our current json object
+				String woah = json.getString("hello");
+				
+				//show everyone what we found!
+				quickToast("hello: " + woah);				
+				
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				quickToast(e.getMessage());
+				return false;
+			}
+			
+			return true;
+			
+		}
+		public void sendServerMessage()
+		{
+			
+			if(this.socketManager == null)
+			{
+				quickToast("Failed to send object, no socket server initialized in SurfaceView");
+				return;
+			}
+			
+			JSONObject json = new JSONObject();
+			try {
+				json
+				.put("hello", "world"); 
+				
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				quickToast(e.getMessage());
+			}
+			
+			//turn our json object into a string, and away we go!
+			socketManager.doSendMessage(json.toString());		
+			
+		}
+		
 }
