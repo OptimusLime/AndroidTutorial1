@@ -33,6 +33,13 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	private Queue<PointF> pointQueue;
 	private PointF lastPoint;	
 	
+	//Server related variables
+	private Paint serverPaint; // added	
+	//a queue to hold server touch events
+	private Queue<PointF> serverPointQueue;
+	private PointF serverLastPoint;	
+	
+	
 	//variables for drawing in rainbow colors!
 	float[] hsv = new float[] { 0, 1, 1 };
 	private boolean useRainbow = false;
@@ -61,6 +68,17 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		//this will hold all points ready to be drawn
 		pointQueue = new ConcurrentLinkedQueue<PointF>();
 		
+		//initialize our server object too
+		serverPaint = new Paint();
+
+		//set our color and width defaults, these can be adjusted later
+		serverPaint.setColor(Color.MAGENTA);
+		serverPaint.setStrokeWidth(5);
+		
+		//we initialize our queue of objects
+		//this will hold all points ready to be drawn
+		serverPointQueue = new ConcurrentLinkedQueue<PointF>();
+		
 		//can you focus on this view object?
 		this.setFocusable(true);
 		
@@ -83,7 +101,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				Log.d("touch", "down");	
 				
 				//queue up our new point
-				addXYPoint(e.getX(), e.getY());
+				addXYPointUser(e.getX(), e.getY());
 
 				//run our drawing code
 				runDrawing();
@@ -127,44 +145,53 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		return true;
 	  }
 	  
+	  public void addXYPointUser(float x, float y)
+		{
+		  addXYPoint(x, y, pointQueue, lastPoint);
+		}
+	  public void addXYPointServer(float x, float y)
+		{
+		  addXYPoint(x, y, serverPointQueue, serverLastPoint);
+		}
+	  
 		/**
 		 * Adds x,y to point queue, breaking into chunks and adding incremental points of the line
 		 * @param x
 		 * @param y
 		 */
-		public void addXYPoint(float x, float y)
+		public void addXYPoint(float x, float y, Queue<PointF> pq, PointF lp)
 		{
 			//if we don't have a last point, add our first part
-			if(lastPoint == null)
+			if(lp == null)
 			{
 				//we don't have a last point, simply add the x,y directly to the queue
-				pointQueue.add(new PointF(x,y));
+				pq.add(new PointF(x,y));
 			}
 			else
 			{
 				//how many circles per pixel distance
 				float circlesPerPixelDistance = 1.1f;
 				//our distance between the last point and this new point
-				double pointDistance = Math.sqrt((x - lastPoint.x)*(x - lastPoint.x) 
-										+  (y - lastPoint.y)* (y - lastPoint.y));
+				double pointDistance = Math.sqrt((x - lp.x)*(x - lp.x) 
+										+  (y - lp.y)* (y - lp.y));
 				
 				//number of desired circles = pixelDistance / circlesPerPixelDistance  
 				int pieces = (int)Math.ceil(pointDistance/circlesPerPixelDistance);
 
 				
 				//we have a lastpoint, break down the difference into chunks, and draw all those chunks
-				float dx = (x - lastPoint.x)/pieces;
-				float dy = (y - lastPoint.y)/pieces;
+				float dx = (x - lp.x)/pieces;
+				float dy = (y - lp.y)/pieces;
 				
 					
 				//loop through, adding the incremental points for our draw line
 				for (int i = 0; i < pieces; i++) {
-					pointQueue.add(new PointF(lastPoint.x + dx * i, lastPoint.y + dy*i));
+					pq.add(new PointF(lp.x + dx * i, lp.y + dy*i));
 				}
-				pointQueue.add(new PointF(x,y));
+				pq.add(new PointF(x,y));
 			}
 
-			lastPoint = new PointF(x,y);
+			lp = new PointF(x,y);
 			
 			
 		}
@@ -215,6 +242,16 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 						hsv[0] = 0;
 				}
 		  }
+		  
+		  while(!serverPointQueue.isEmpty())
+		  {
+			  //ask our queue the next point to draw!
+			  PointF pointToDraw = serverPointQueue.poll();
+		  
+			  //do our drawing of points here!
+			  c.drawCircle(pointToDraw.x, pointToDraw.y, 5, serverPaint);
+		  }
+		  
 	  }
 	  
 	  private void setupBitmap()
@@ -257,10 +294,14 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			c.drawColor(Color.BLACK);
 			
 			//we clear out our last point
-			lastPoint = null;
-			
+			lastPoint = null;			
 			//and make sure we don't have anything in the queue for drawing
 			pointQueue.clear();
+			
+			//we clear out our last server point
+			serverLastPoint = null;			
+			//and make sure we don't have anything in the queue for drawing server related variables
+			serverPointQueue.clear();
 			
 			//then we draw the now empty screen for the user
 			runDrawing();
@@ -294,15 +335,15 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				
 				//however, note that we don't want to draw a line to this point, so we need 
 				//to make sure there is no last point
-				lastPoint = null;
+				serverLastPoint = null;
 				
 				//queue up our new point
-				addXYPoint(x,y);
+				addXYPointServer(x,y);
 
 				//a quirk with our drawing code, when we add a point, we set the last point
 				//we need to null it out again! -- this is a hack, we'll need to 
 				//fix up our code so we don't do something silly like this
-				lastPoint = null;
+				serverLastPoint = null;
 				
 				//run our drawing code
 				runDrawing();
