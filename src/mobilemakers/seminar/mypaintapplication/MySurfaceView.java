@@ -107,7 +107,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				runDrawing();
 				
 				//let's take this oportunity to send a message to the server!
-				this.sendServerMessage(new PointF(e.getX(), e.getY()));
+				this.sendServerMessage(new PointF(e.getX(), e.getY()), MotionEvent.ACTION_DOWN);
 				
 				
 				break;		
@@ -122,7 +122,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				runDrawing();
 				
 				//let's take this oportunity to send a message to the server!
-				this.sendServerMessage(new PointF(e.getX(), e.getY()));
+				this.sendServerMessage(new PointF(e.getX(), e.getY()),MotionEvent.ACTION_MOVE);
 				
 				//this means we should draw a line from the last place we saw, to this new point!
 				break;
@@ -133,6 +133,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			case MotionEvent.ACTION_POINTER_3_UP:
 				Log.d("touch", "up");
 								
+				//let's take this oportunity to send a message to the server!
+				this.sendServerMessage(new PointF(e.getX(), e.getY()),MotionEvent.ACTION_UP);
+				
 				lastPoint = null;
 				
 				break;
@@ -332,8 +335,35 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				float x = Float.parseFloat(json.getString("x"));
 				float y = Float.parseFloat(json.getString("y"));
 				
-				//queue up our new point
-				addXYPointServer(x,y);
+			
+				
+				int mouseMessage = Integer.parseInt(json.getString("mouse"));
+				
+				switch(mouseMessage)
+				{
+				//we do the same things whether it's first touch or last -- 
+					case MotionEvent.ACTION_DOWN:
+						serverLastPoint = null;		
+						//queue up our new point
+						addXYPointServer(x,y);
+						
+						break;
+					case MotionEvent.ACTION_MOVE:
+						
+						//queue up our new point
+						addXYPointServer(x,y);
+						
+						break;
+						
+					case MotionEvent.ACTION_UP:
+					//clear out the server variables
+						//we clear out our last server point
+						serverLastPoint = null;			
+						//and make sure we don't have anything in the queue for drawing server related variables
+//						serverPointQueue.clear();
+						
+						break;
+				}
 				
 				//run our drawing code
 				runDrawing();
@@ -349,7 +379,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			return true;
 			
 		}
-		public void sendServerMessage(PointF point)
+		public void sendServerMessage(PointF point, int mouseMessage)
 		{
 			
 			if(this.socketManager == null)
@@ -367,7 +397,8 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			  //set our json object, but invert the y point, so that it's mirrored across the x axis!
 				json
 				.put("x", point.x)
-				.put("y", frame.height() - point.y);
+				.put("y", frame.height() - point.y)
+				.put("mouse", mouseMessage);
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block

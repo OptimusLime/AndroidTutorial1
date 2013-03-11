@@ -1,4 +1,4 @@
-package mobilemakers.seminar.mypaintapplication;
+ package mobilemakers.seminar.mypaintapplication;
 
 import android.app.Activity;
 import android.content.Intent;
