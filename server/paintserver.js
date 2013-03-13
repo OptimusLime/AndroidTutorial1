@@ -19,9 +19,15 @@ net.createServer(function(socket) {
   socket.on('data', function(data) {
     console.log('[' + socket.id + '] Data received: ' + data);
     
-    //whatever it is, let's just echo it write back to this person
-     socket.write(data);
-     
+ 	var dString = "" + data;
+    var splits = dString.split('}{');
+    for(var i=0; i< splits.length; i++)
+    {
+    	var dObj = JSON.parse((i==0 ? '' : '{') +  splits[i]
+        		               + (splits[i].indexOf("}") !== -1 ? '' : '}'));
+        dObj.sid = socket.id;
+    	socket.write(JSON.stringify(dObj));
+    }
   });
 
   socket.on('close', function(data) {

@@ -2,6 +2,11 @@ package mobilemakers.seminar.mypaintapplication;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -29,16 +34,18 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	private Bitmap bitmap;
 	private Paint p; // added
 	
-	//a queue to hold touch events
-	private Queue<PointF> pointQueue;
-	private PointF lastPoint;	
 	
 	//Server related variables
-	private Paint serverPaint; // added	
-	//a queue to hold server touch events
-	private Queue<PointF> serverPointQueue;
-	private PointF serverLastPoint;	
 	
+	//a map of queues to hold touch events for each socket
+	private Map<String, Queue<PointF>> sidToQueue= new HashMap<String, Queue<PointF>>();	
+	//a map to hold last points
+	private Map<String, PointF> sidLastPoints = new HashMap<String, PointF>();
+	//a map of paint objects for each sid
+	private Map<String, Paint> sidPaintObjects = new HashMap<String, Paint>();
+	
+	private Queue<PointF> pointQueue;
+	private PointF lastPoint;	
 	
 	//variables for drawing in rainbow colors!
 	float[] hsv = new float[] { 0, 1, 1 };
@@ -68,16 +75,6 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		//this will hold all points ready to be drawn
 		pointQueue = new ConcurrentLinkedQueue<PointF>();
 		
-		//initialize our server object too
-		serverPaint = new Paint();
-
-		//set our color and width defaults, these can be adjusted later
-		serverPaint.setColor(Color.MAGENTA);
-		serverPaint.setStrokeWidth(5);
-		
-		//we initialize our queue of objects
-		//this will hold all points ready to be drawn
-		serverPointQueue = new ConcurrentLinkedQueue<PointF>();
 		
 		//can you focus on this view object?
 		this.setFocusable(true);
@@ -154,9 +151,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		{
 		  lastPoint = addXYPoint(x, y, pointQueue, lastPoint);
 		}
-	  public void addXYPointServer(float x, float y)
+	  public void addXYPointServer(float x, float y, String socketID)
 		{
-		  serverLastPoint = addXYPoint(x, y, serverPointQueue, serverLastPoint);
+		  sidLastPoints.put(socketID, addXYPoint(x, y, sidToQueue.get(socketID), sidLastPoints.get(socketID)));
 		}
 	  
 		/**
@@ -247,14 +244,21 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				}
 		  }
 		  
-		  while(!serverPointQueue.isEmpty())
-		  {
-			  //ask our queue the next point to draw!
-			  PointF pointToDraw = serverPointQueue.poll();
 		  
-			  //do our drawing of points here!
-			  c.drawCircle(pointToDraw.x, pointToDraw.y, 5, serverPaint);
+		  for(String key : sidToQueue.keySet())
+		  {
+			  Queue<PointF> pointQueue = sidToQueue.get(key);
+			  while(!pointQueue.isEmpty())
+			  {
+				  //ask our queue the next point to draw!
+				  PointF pointToDraw = pointQueue.poll();
+			  
+				  //do our drawing of points here!
+				  c.drawCircle(pointToDraw.x, pointToDraw.y, 5, sidPaintObjects.get(key));
+			  }
 		  }
+		  
+		
 		  
 	  }
 	  
@@ -302,10 +306,14 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			//and make sure we don't have anything in the queue for drawing
 			pointQueue.clear();
 			
-			//we clear out our last server point
-			serverLastPoint = null;			
-			//and make sure we don't have anything in the queue for drawing server related variables
-			serverPointQueue.clear();
+
+			//we clear out our last server points
+			sidLastPoints.clear();
+			for(String key: sidToQueue.keySet())
+			{
+				//and make sure we don't have anything in the queue for drawing server related variables
+				sidToQueue.get(key).clear();
+			}			
 			
 			//then we draw the now empty screen for the user
 			runDrawing();
@@ -322,10 +330,38 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 		 {
 			 this.socketManager = psm;
 		 }
+		 
+		 void checkSocketExists(String sid)
+		{
+			if(!sidToQueue.containsKey(sid))
+			{
+				sidToQueue.put(sid, new ConcurrentLinkedQueue<PointF>());
+			}
+			if(!sidPaintObjects.containsKey(sid))
+			{
+				sidPaintObjects.put(sid, createRandomPaintObject());
+			}
+		}
+		 Paint createRandomPaintObject()
+		 {
+			//initialize our server object too
+			Paint rPaint = new Paint();
+
+			//set our color and width defaults, these can be adjusted later
+			int rColor = Color.rgb((int)Math.floor(Math.random()*255), 
+					(int)Math.floor(Math.random()*255), 
+					(int)Math.floor(Math.random()*255));
+			
+			rPaint.setColor(rColor);
+			rPaint.setStrokeWidth(5);
+			
+			return rPaint;
+		 }
 		
 		  //to be called on the main UI thread ONLY
 		public boolean readServerMessage(byte[] rsp) {
 			String msg = new String(rsp);
+			
 			Log.d("paintSocket", "Received message: " + msg);
 			
 			
@@ -335,7 +371,13 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				float x = Float.parseFloat(json.getString("x"));
 				float y = Float.parseFloat(json.getString("y"));
 				
-			
+				String socketID = json.getString("sid");
+				
+				//nothing to do without the socketid
+				if(socketID == null)
+					return true;
+				
+				checkSocketExists(socketID);
 				
 				int mouseMessage = Integer.parseInt(json.getString("mouse"));
 				
@@ -343,22 +385,23 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				{
 				//we do the same things whether it's first touch or last -- 
 					case MotionEvent.ACTION_DOWN:
-						serverLastPoint = null;		
+						
+						sidLastPoints.remove(socketID);
 						//queue up our new point
-						addXYPointServer(x,y);
+						addXYPointServer(x,y, socketID);
 						
 						break;
 					case MotionEvent.ACTION_MOVE:
 						
 						//queue up our new point
-						addXYPointServer(x,y);
+						addXYPointServer(x,y, socketID);
 						
 						break;
 						
 					case MotionEvent.ACTION_UP:
 					//clear out the server variables
 						//we clear out our last server point
-						serverLastPoint = null;			
+						sidLastPoints.remove(socketID);	
 						//and make sure we don't have anything in the queue for drawing server related variables
 //						serverPointQueue.clear();
 						

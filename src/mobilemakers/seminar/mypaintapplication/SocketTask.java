@@ -350,9 +350,18 @@ public class SocketTask implements Runnable {
 		SocketChannel socketChannel = (SocketChannel) key.channel();
 
 		synchronized (this.pendingData) {
+			int publishCount = 0;
+			int size = this.pendingData.size();
+			Log.d("Pending Count", "" + size);
 			// Write until there's not more data ...
 			while (!this.pendingData.isEmpty()) {
 				PendingWrite pending = this.pendingData.get(0);
+				
+				String end = (publishCount == size -1 ? "" : "");
+				
+				String pendString = new String(pending.data.array());
+				pending.data = ByteBuffer.wrap((pendString + end).getBytes("UTF8"));
+								
 				socketChannel.write(pending.data);
 				if (pending.data.remaining() > 0) {
 					// ... or the socket's buffer fills up
