@@ -434,8 +434,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 						
 						break;
 					case chat:
-						
-						
+																		
 						break;
 					case clear:						
 						this.clear(false);

@@ -5,18 +5,65 @@ var net = require('net'),
 var connected_sockets = {};
 var last_net_socket_id = 0;
 
-broadcast = function(allSockets, msg, sender)
+var socketToRoom = {};
+var roomToSockets = {};
+var rooms = [];
+var defaultRoom = "Default";
+
+//http://stackoverflow.com/questions/500606/difference-between-using-the-delete-operator-or-the-splice-function-on-an-array
+// Array Remove - By John Resig (MIT Licensed)
+Array.prototype.remove = function(from, to) {
+  var rest = this.slice((to || from) + 1 || this.length);
+  this.length = from < 0 ? this.length + from : from;
+  return this.push.apply(this, rest);
+};
+
+broadcastToRoom = function(roomName, msg, sender)
 {
-        for(var sKey in allSockets)
+	//grab our room of sockets
+	var allSockets = getOrCreateRoom(roomName);
+	//loop through and send out to our other sockets -- skipping the sender
+        for(var sKey =0; sKey < allSockets.length; sKey++)
         {
-                var socket = allSockets[sKey];
-                if(socket != sender)
-                {
-                        socket.write(msg);
-                }
+        	var socket = allSockets[sKey];
+            if(socket != sender)
+            {
+                socket.write(msg);
+            }
         }
 }
 
+
+getOrCreateRoom = function(roomName)
+{
+	if(!roomToSockets[roomName])
+  	{
+  		roomToSockets[roomName] = [];
+  		rooms.push(roomName);
+  	}
+  
+  	return roomToSockets[roomName];
+}
+
+addSocketToRoom = function(room, socket)
+{
+	var socketArray = getOrCreateRoom(room);
+	socketArray.push(socket);
+	socketToRoom[socket] = room;
+}
+removeSocketFromRoom = function(socket)
+{
+	var room = socketToRoom[socket];
+	var socketArray = getOrCreateRoom(room);
+	var sIx = socketArray.indexOf(socket);
+	
+ 	console.log('Removing socket at room index: ' + sIx);
+	
+	if(sIx !== -1)
+		socketArray.remove(sIx);	
+		
+	delete socketToRoom[socket];
+}
 
 //package include with NodeJS for creating a socket server
 net.createServer(function(socket) {
@@ -25,6 +72,11 @@ net.createServer(function(socket) {
   connected_sockets[last_net_socket_id] = socket;
   socket.id = last_net_socket_id;
   last_net_socket_id = last_net_socket_id + 1;
+  
+  //if we don't have this object in our sockettoroom object, it doesn't have a room!
+  if(!socketToRoom[socket]){
+  	addSocketToRoom(defaultRoom, socket);  
+  	}
 
   console.log('net socket connected: [' + socket.id + '] '  + socket.remoteAddress +':'+ socket.remotePort);
 
@@ -38,16 +90,22 @@ net.createServer(function(socket) {
     {
     	var dObj = JSON.parse((i==0 ? '' : '{') +  splits[i]
         		               + (splits[i].indexOf("}") !== -1 ? '' : '}'));
-        dObj.sid = socket.id;
-        //broadcast to all other sockets but ourselves
-        //in reality, this should be localized to a paint room or something
-    	broadcast(connected_sockets, JSON.stringify(dObj), socket);  
+		//let the user know our socket ID
+		//And the room we're currently in!
+		dObj.sid = socket.id;
+        dObj.room = socketToRoom[socket];
+                
+        //broadcast to all other sockets in the room!
+    	broadcastToRoom(socketToRoom[socket], JSON.stringify(dObj), socket);  
     }
   });
 
   socket.on('close', function(data) {
       
       console.log('[' + socket.id + '] Closed: ' + data);
+      
+      //we closed, remove us from the room, and delete us!
+      removeSocketFromRoom(socket);
       
       delete connected_sockets[socket.id];
   });
