@@ -5,6 +5,19 @@ var net = require('net'),
 var connected_sockets = {};
 var last_net_socket_id = 0;
 
+broadcast = function(allSockets, msg, sender)
+{
+        for(var sKey in allSockets)
+        {
+                var socket = allSockets[sKey];
+                if(socket != sender)
+                {
+                        socket.write(msg);
+                }
+        }
+}
+
+
 //package include with NodeJS for creating a socket server
 net.createServer(function(socket) {
 
@@ -26,7 +39,9 @@ net.createServer(function(socket) {
     	var dObj = JSON.parse((i==0 ? '' : '{') +  splits[i]
         		               + (splits[i].indexOf("}") !== -1 ? '' : '}'));
         dObj.sid = socket.id;
-    	socket.write(JSON.stringify(dObj));
+        //broadcast to all other sockets but ourselves
+        //in reality, this should be localized to a paint room or something
+    	broadcast(connected_sockets, JSON.stringify(dObj), socket);  
     }
   });
 

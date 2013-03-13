@@ -32,7 +32,6 @@ public class PaintSocketManager {
 		  {
 			  //this will be randomly assigned on our servers, so you need to put in the 
 			  //appropriate port depending on what was generated
-			  
 			  int yourPortID = 10000;
 			  socketTask.connect(InetAddress.getByName("demo2.mobilemakers.net"), yourPortID);
 			  socketTask.start();

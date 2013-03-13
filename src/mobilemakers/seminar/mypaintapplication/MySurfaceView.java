@@ -440,7 +440,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			  //set our json object, but invert the y point, so that it's mirrored across the x axis!
 				json
 				.put("x", point.x)
-				.put("y", frame.height() - point.y)
+				.put("y", point.y)
 				.put("mouse", mouseMessage);
 				
 			} catch (JSONException e) {
