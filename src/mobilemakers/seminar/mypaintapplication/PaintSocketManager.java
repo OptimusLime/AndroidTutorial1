@@ -11,6 +11,8 @@ import android.util.Log;
 
 public class PaintSocketManager {
 
+	
+	
 	private SocketTask socketTask;
 	private SocketWriteHandler writeHandler;
 	

@@ -1,5 +1,7 @@
 package mobilemakers.seminar.mypaintapplication;
 
+import mobilemakers.seminar.mypaintapplication.PaintingActivity.MessageType;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -17,6 +19,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.text.method.MovementMethod;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -33,6 +36,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 	private SurfaceHolder sholder;
 	private Bitmap bitmap;
 	private Paint p; // added
+	
 	
 	
 	//Server related variables
@@ -104,7 +108,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				runDrawing();
 				
 				//let's take this oportunity to send a message to the server!
-				this.sendServerMessage(new PointF(e.getX(), e.getY()), MotionEvent.ACTION_DOWN);
+				this.sendServerMessage(jsonMovementData(new PointF(e.getX(), e.getY()), MotionEvent.ACTION_DOWN));
 				
 				
 				break;		
@@ -119,7 +123,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				runDrawing();
 				
 				//let's take this oportunity to send a message to the server!
-				this.sendServerMessage(new PointF(e.getX(), e.getY()),MotionEvent.ACTION_MOVE);
+				this.sendServerMessage(jsonMovementData(new PointF(e.getX(), e.getY()),MotionEvent.ACTION_MOVE));
 				
 				//this means we should draw a line from the last place we saw, to this new point!
 				break;
@@ -131,7 +135,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				Log.d("touch", "up");
 								
 				//let's take this oportunity to send a message to the server!
-				this.sendServerMessage(new PointF(e.getX(), e.getY()),MotionEvent.ACTION_UP);
+				this.sendServerMessage(jsonMovementData(new PointF(e.getX(), e.getY()),MotionEvent.ACTION_UP));
 				
 				lastPoint = null;
 				
@@ -293,7 +297,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			this.sholder = null;
 		}
 	  
-		public void clear()
+		public void clear(boolean sendToServer)
 		{
 			//We create a canvas object for our bitmap
 			Canvas c = new Canvas(bitmap);
@@ -317,6 +321,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			
 			//then we draw the now empty screen for the user
 			runDrawing();
+			
+			if(sendToServer)
+				this.sendServerMessage(jsonClearData());
 		}
 	  
 		//Handling Server calls in this section!
@@ -358,18 +365,13 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			return rPaint;
 		 }
 		
-		  //to be called on the main UI thread ONLY
-		public boolean readServerMessage(byte[] rsp) {
-			String msg = new String(rsp);
-			
-			Log.d("paintSocket", "Received message: " + msg);
-			
-			
-			try {
-				JSONObject json = new JSONObject(msg);
-				
-				float x = Float.parseFloat(json.getString("x"));
-				float y = Float.parseFloat(json.getString("y"));
+		 boolean processMovement(JSONObject json) throws NumberFormatException, JSONException
+		 {
+			//grab the size of our surface view
+				Rect frame = sholder.getSurfaceFrame();
+				  
+				float x = Float.parseFloat(json.getString("x"))*frame.width();
+				float y = Float.parseFloat(json.getString("y"))*frame.height();
 				
 				String socketID = json.getString("sid");
 				
@@ -410,6 +412,40 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				
 				//run our drawing code
 				runDrawing();
+			 return true;
+		 }
+		 
+		  //to be called on the main UI thread ONLY
+		public boolean readServerMessage(byte[] rsp) {
+			String msg = new String(rsp);
+			
+			Log.d("paintSocket", "Received message: " + msg);
+			
+			
+			try {
+				JSONObject json = new JSONObject(msg);
+				
+				String type = json.getString("type");
+				switch(PaintingActivity.MessageType.valueOf(type))
+				{
+					case movement:
+						
+						processMovement(json);
+						
+						break;
+					case chat:
+						
+						
+						break;
+					case clear:						
+						this.clear(false);
+						break;
+						
+					default:
+						break;
+				}
+				
+				
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
@@ -422,14 +458,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 			return true;
 			
 		}
-		public void sendServerMessage(PointF point, int mouseMessage)
+		
+		JSONObject jsonMovementData(PointF point, int mouseMessage)
 		{
-			
-			if(this.socketManager == null)
-			{
-				quickToast("Failed to send object, no socket server initialized in SurfaceView");
-				return;
-			}
 			
 			JSONObject json = new JSONObject();
 			try {
@@ -439,14 +470,42 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 				
 			  //set our json object, but invert the y point, so that it's mirrored across the x axis!
 				json
-				.put("x", point.x)
-				.put("y", point.y)
+				.put("type", MessageType.movement.toString())
+				.put("x", point.x/frame.width())
+				.put("y", point.y/frame.height())
 				.put("mouse", mouseMessage);
 				
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 				quickToast(e.getMessage());
+			}
+			
+			return json;
+			
+		}
+		JSONObject jsonClearData()
+		{
+			JSONObject json = new JSONObject();
+			try {
+				json.put("type", MessageType.clear.toString());
+
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				quickToast(e.getMessage());
+			}
+			
+			return json;
+				
+		}
+		public void sendServerMessage(JSONObject json)
+		{
+			
+			if(this.socketManager == null)
+			{
+				quickToast("Failed to send object, no socket server initialized in SurfaceView");
+				return;
 			}
 			
 			//turn our json object into a string, and away we go!

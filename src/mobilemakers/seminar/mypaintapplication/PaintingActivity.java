@@ -16,7 +16,15 @@ import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.Toast;
 
+
 public class PaintingActivity extends Activity implements SocketReadHandler, SocketWriteHandler{
+	
+	public enum MessageType
+	{
+		chat,
+		movement,
+		clear		
+	}
 	
 	private MySurfaceView msv;
 	private PaintSocketManager socketManager;
@@ -88,7 +96,7 @@ public class PaintingActivity extends Activity implements SocketReadHandler, Soc
 		public boolean onOptionsItemSelected(MenuItem item) {
 			switch (item.getItemId()) {
 			case R.id.Clear:
-					msv.clear();
+					msv.clear(true);
 				break;
 			
 			}
